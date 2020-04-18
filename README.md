@@ -71,6 +71,23 @@ The `@Input` and `@Output` syntax allow to pass type parameters to
 (in our example, this type application is the only indication needed to tell
 the compiler to deserialize `Output` objects).
 
+# Usage in a project
+
+In a typical project, you will have fixed models and varying inputs.
+That is, you would like to carry the models along with the code (e.g., a web
+application or gRPC server using minizinc in the background) in a same
+repository as your Haskell code. One option is to leverage the support of cabal
+[data-files](https://www.haskell.org/cabal/users-guide/developing-packages.html#accessing-data-files-from-package-code).
+
+You will still need some mapping functions to translate between domain objects
+like `User` into the JSON values that MiniZinc requires: objects do not map
+well with relations. We may consider compile-time helpers like TemplateHaskell,
+but at this time it would not be immediately feasible. Be at peace with this.
+
+For now, the implementation leverages file-system to pass the JSON object to
+MiniZinc, this design means you should pay attention to disk usage and maybe
+clean the clutter.
+
 # Misc.
 
 The author of this package is not affiliated with MiniZinc.
