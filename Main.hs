@@ -61,18 +61,25 @@ data Output003 = Output003 { room :: [Int] }
 
 instance FromJSON Output003
 
+translate003 :: [Room] -> [User] -> (Input003, Output003 -> [(User, Room)])
+translate003 rooms users =
+    let input003 = Input003 (length users) (length rooms) prefs sizes
+        f output003 = zip users (fmap (\roomidx -> rooms !! roomidx) (room output003))
+    in (input003, f)
+  where
+    prefs = [ [likeUser u1 u2 | u2 <- users] | u1 <- users ]
+    sizes = [roomSize r | r <- rooms]
+
 example003 :: IO ()
 example003 = do
   path <- getDataFileName "models/example003.mzn"
   let solve = runLastMinizincJSON (simpleMiniZinc @Input003 @Output003 path 10000 Gecode)
 
-  let prefs = [ [likeUser u1 u2 | u2 <- users] | u1 <- users ]
-  output <- solve $ Input003 (length users) (length rooms) prefs [roomSize r | r <- rooms]
+  let (input003,translateBack) = translate003 rooms users
+  output <- solve input003
   case output of
     Nothing -> print "no solutions"
-    Just mapping -> print $ zip (fmap name users)
-                                (fmap (\roomidx -> label $ rooms !! roomidx) (room mapping))
-
+    Just pairs -> print [ (name u, label r) | (u,r) <- translateBack pairs ]
   where
     users = [albert, paul, philip, sarah, sylvia, zoe]
     rooms = [large, medium, small]
