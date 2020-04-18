@@ -1,19 +1,24 @@
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE TypeApplications #-}
+
 module Main where
 
-import Process.Minizinc
-import Process.Minizinc.Inspect
+import Data.Aeson
 import Data.Hashable
 import GHC.Generics
-import Data.Aeson
+import Process.Minizinc
+import Process.Minizinc.Inspect
 
-data Input = Input { x :: Int }
+data Input = Input {x :: Int}
   deriving (Generic)
+
 instance ToJSON Input
+
 instance Hashable Input
-data Output = Output { y :: Int }
+
+data Output = Output {y :: Int}
   deriving (Show, Generic)
+
 instance FromJSON Output
 
 main :: IO ()

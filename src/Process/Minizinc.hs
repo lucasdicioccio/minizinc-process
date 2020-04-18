@@ -1,22 +1,23 @@
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 -- | A set of types and functions to help calling Minizinc as an external binary.
 --
 -- Current strategy is to use JSON encode/decoding for passing in inputs and
 -- reading outputs.
 -- At this time, only a primitive output parser is supported.
-module Process.Minizinc (
-    MiniZinc(..)
-  , simpleMiniZinc
-  , Solver(..)
-  , SolverName
-  , MilliSeconds
-  , runLastMinizincJSON
-  ) where
+module Process.Minizinc
+  ( MiniZinc (..),
+    simpleMiniZinc,
+    Solver (..),
+    SolverName,
+    MilliSeconds,
+    runLastMinizincJSON,
+  )
+where
 
 import Control.Monad ((>=>))
-import Data.Aeson (ToJSON, FromJSON, decode, encode)
+import Data.Aeson (FromJSON, ToJSON, decode, encode)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as ByteString
 import qualified Data.ByteString.Lazy as LByteString
@@ -38,25 +39,25 @@ data Solver = Chuffed | COIN_BC | CPLEX | Gecode | Gurobi | SCIP | Xpress | Othe
 -- | An object helping to run MiniZinc.
 data MiniZinc input answer
   = MiniZinc
-      { model :: FilePath
-      -- ^ a file path to a model
-      , mkTmpDataPath :: input -> FilePath
-      -- ^ a file path to hold, must be writable and readable
-      , mkTimeLimit :: input -> MilliSeconds Int
-      -- ^ a timelimit in seconds (an Int)
-      , mkSolver :: input -> Solver
-      -- ^ the solver to use (see `minizinc --solvers`)
-      , mkExtraArgs :: input -> [String]
-      -- ^ other arguments that get appended before the path to the model and data paths
+      { -- | a file path to a model
+        model :: FilePath,
+        -- | a file path to hold, must be writable and readable
+        mkTmpDataPath :: input -> FilePath,
+        -- | a timelimit in seconds (an Int)
+        mkTimeLimit :: input -> MilliSeconds Int,
+        -- | the solver to use (see `minizinc --solvers`)
+        mkSolver :: input -> Solver,
+        -- | other arguments that get appended before the path to the model and data paths
+        mkExtraArgs :: input -> [String]
       }
 
 -- | A constructor for MiniZinc object for simple situations.
-simpleMiniZinc
-  :: Hashable input
-  => FilePath
-  -> MilliSeconds Int
-  -> Solver
-  -> MiniZinc input answer
+simpleMiniZinc ::
+  Hashable input =>
+  FilePath ->
+  MilliSeconds Int ->
+  Solver ->
+  MiniZinc input answer
 simpleMiniZinc path timeout solver =
   MiniZinc
     path
@@ -70,11 +71,11 @@ simpleMiniZinc path timeout solver =
 -- The parser for now is primitive and all the parsing occurs after processing
 -- with no guarantee to run on bounded-memory. This matters if your MiniZinc
 -- model returns so many solutions that the output is large.
-runLastMinizincJSON
-  :: (ToJSON input, FromJSON answer)
-  => MiniZinc input answer
-  -> input
-  -> IO (Maybe answer)
+runLastMinizincJSON ::
+  (ToJSON input, FromJSON answer) =>
+  MiniZinc input answer ->
+  input ->
+  IO (Maybe answer)
 runLastMinizincJSON minizinc obj = do
   LByteString.writeFile fullPath $ encode obj
   (_, out, err) <- readProcessWithExitCode "minizinc" args ""
@@ -82,10 +83,8 @@ runLastMinizincJSON minizinc obj = do
   where
     fullPath :: FilePath
     fullPath = mkTmpDataPath minizinc obj
-
     locateLastAnswer :: FromJSON answer => ByteString -> Maybe answer
     locateLastAnswer = locateLastOutput >=> decode . fromStrict
-
     args :: [String]
     args =
       [ "--time-limit",
@@ -94,12 +93,11 @@ runLastMinizincJSON minizinc obj = do
         showSolver (mkSolver minizinc obj),
         "--output-mode",
         "json"
-      ] ++ (mkExtraArgs minizinc obj)
-        ++
-      [
-        model minizinc,
-        fullPath
       ]
+        ++ (mkExtraArgs minizinc obj)
+        ++ [ model minizinc,
+             fullPath
+           ]
 
 showSolver :: Solver -> String
 showSolver = \case
