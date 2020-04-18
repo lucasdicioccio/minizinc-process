@@ -41,13 +41,18 @@ library
                      , text
   default-language:    Haskell2010
 
---executable minizinc-process-exe
---  main-is:             Main.hs
---  -- other-modules:
---  -- other-extensions:
---  build-depends:       base >=4.13 && <4.14
---                     , minizinc-process-lib
---                     , aeson
---                     , hashable
---                     , text
---  -- hs-source-dirs:
+executable minizinc-process-exe
+  main-is:             Main.hs
+  other-modules:
+                       Paths_minizinc_process
+  -- other-extensions:
+  build-depends:       base >=4.13 && <4.14
+                     , aeson
+                     , minizinc-process
+                     , hashable
+                     , text
+  -- hs-source-dirs:
+  data-files:
+     models/example001.mzn
+     models/example003.mzn
+  default-language:    Haskell2010
