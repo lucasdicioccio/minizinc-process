@@ -4,7 +4,8 @@
 
 module Main where
 
-import Data.Aeson
+import Data.Foldable (traverse_)
+import Data.Aeson (FromJSON, ToJSON)
 import Data.Hashable
 import Data.Text (Text)
 import GHC.Generics
@@ -15,30 +16,45 @@ import Paths_minizinc_process
 
 main :: IO ()
 main = do
+  putStrLn "*>> example 1 (trivial)"
   example001
+  putStrLn "*>> example 2 (inspection)"
+  example002
+  putStrLn "*>> example 3 (realistic)"
   example003
 
--- Example001
-data Input = Input {x :: Int}
-  deriving (Generic)
-
-instance ToJSON Input
-
-instance Hashable Input
-
-data Output = Output {y :: Int}
+-- Example001: some trivial input/output.
+data Input001 = Input001 {x :: Int}
   deriving (Show, Generic)
 
-instance FromJSON Output
+instance ToJSON Input001
+
+instance Hashable Input001
+
+data Output001 = Output001 {y :: Int}
+  deriving (Show, Generic)
+
+instance FromJSON Output001
 
 example001 :: IO ()
 example001 = do
   path <- getDataFileName "models/example001.mzn"
-  let mzn = simpleMiniZinc @Input @Output path 1000 Gecode
+  let mzn = simpleMiniZinc @Input001 @Output001 path 1000 Gecode
   let solve = runLastMinizincJSON mzn
-  traverse solve [Input x | x <- [0..10] ] >>= print
+  traverse_ (\i -> print i >> solve i >>= print) [Input001 x | x <- [0..4] ]
 
--- Example003
+-- Example002: shows model inspection result for a model with a bit of every
+-- MiniZinc types.
+example002 :: IO ()
+example002 = do
+  inspect "models/example001.mzn" >>= print
+
+-- Example003: demonstrates how to work with some domain model a diverging from
+-- the constraint model (which uses multi-dimensional array from User to User).
+--
+--  We attribute users to rooms. Each user has some preference to be in the
+--  same room as others. Rooms have limited size.
+
 data User = User { name :: Text , likeUser :: User -> Int }
 
 userFromPairs :: Text -> [(Text, Int)] -> Int -> User
@@ -64,11 +80,12 @@ instance FromJSON Output003
 translate003 :: [Room] -> [User] -> (Input003, Output003 -> [(User, Room)])
 translate003 rooms users =
     let input003 = Input003 (length users) (length rooms) prefs sizes
-        f output003 = zip users (fmap (\roomidx -> rooms !! roomidx) (room output003))
+        f output003 = zip users (fmap unsafeLookupRoom (room output003))
     in (input003, f)
   where
     prefs = [ [likeUser u1 u2 | u2 <- users] | u1 <- users ]
     sizes = [roomSize r | r <- rooms]
+    unsafeLookupRoom roomnbr = rooms !! (roomnbr - 1)
 
 example003 :: IO ()
 example003 = do
