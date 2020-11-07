@@ -5,6 +5,7 @@
 module Main where
 
 import Data.Foldable (traverse_)
+import Data.Function ((&))
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Hashable
 import Data.Text (Text)
@@ -22,6 +23,8 @@ main = do
   example002
   putStrLn "*>> example 3 (realistic)"
   example003
+  putStrLn "*>> example 3bis (streaming realistic)"
+  example003bis
 
 -- Example001: some trivial input/output.
 data Input001 = Input001 {x :: Int}
@@ -98,6 +101,35 @@ example003 = do
     Nothing -> print "no solutions"
     Just pairs -> print [ (name u, label r) | (u,r) <- translateBack pairs ]
   where
+    users = [albert, paul, philip, sarah, sylvia, zoe]
+    rooms = [large, medium, small]
+
+    albert, paul, philip, sarah, sylvia, zoe :: User
+    albert = userFromPairs "albert" [("zoe", 8), ("paul", 2)] (-1)
+    paul   = userFromPairs "paul"   [("philip", 10), ("sarah", 3), ("sylvia", -5)] 0
+    philip = userFromPairs "philip" [("philip", 5), ("sarah", 5), ("sylvia", 3)] 1
+    sarah  = userFromPairs "sarah"  [("sylvia", 5), ("paul", -4)] 0
+    sylvia = userFromPairs "sylvia" [("paul", -5), ("sarah", 10), ("philip", 10)] 3
+    zoe    = userFromPairs "zoe"    [] 0
+
+    large, medium, small :: Room
+    large  = Room "large"  4
+    medium = Room "medium" 3
+    small  = Room "small"  2
+
+
+example003bis :: IO ()
+example003bis = do
+  path <- getDataFileName "models/example003bis.mzn"
+  let (input003,translateBack) = translate003 rooms users
+  let mzn = simpleMiniZinc @Input003 @Output003 path 10000 Gecode
+          & withArgs ["-a"]
+  runMinizincJSON mzn input003 handler
+  where
+    handler = ResultHandler handle
+    handle searchstate out003 = do
+      print (searchstate, out003)
+      pure $ Just handler
     users = [albert, paul, philip, sarah, sylvia, zoe]
     rooms = [large, medium, small]
 

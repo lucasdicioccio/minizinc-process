@@ -1,5 +1,6 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 -- | A set of types and functions to help calling Minizinc as an external binary.
 --
@@ -9,15 +10,23 @@
 module Process.Minizinc
   ( MiniZinc (..),
     simpleMiniZinc,
+    withArgs,
     Solver (..),
     SolverName,
     MilliSeconds,
     runLastMinizincJSON,
+    SearchState(..),
+    ResultHandler(..),
+    runMinizincJSON,
   )
 where
 
 import Control.Monad ((>=>))
-import Data.Aeson (FromJSON, ToJSON, decode, encode)
+import Control.Applicative ((<|>))
+import Data.Attoparsec.ByteString (Parser, parse, IResult(..))
+import Data.Attoparsec.Combinator (try)
+import Data.Aeson (FromJSON, fromJSON, ToJSON, decode, encode, Value, Result(..))
+import Data.Aeson.Parser.Internal (json')
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as ByteString
 import qualified Data.ByteString.Lazy as LByteString
@@ -26,6 +35,8 @@ import Data.ByteString.Search.DFA (split)
 import Data.Hashable (Hashable, hash)
 import qualified Data.List as List
 import System.Process.ByteString (readProcessWithExitCode)
+import System.Process (createProcess, proc, StdStream(CreatePipe), std_out)
+import GHC.IO.Handle (Handle, hClose, hIsEOF)
 
 -- | Type alias asking for milliseconds.
 type MilliSeconds a = Int
@@ -66,6 +77,10 @@ simpleMiniZinc path timeout solver =
     (const solver)
     (const [])
 
+-- | Helper to set arguments.
+withArgs :: [String] -> MiniZinc input answer -> MiniZinc input answer
+withArgs args mzn = mzn { mkExtraArgs = const args }
+
 -- | Runs MiniZinc on the input and parses output for the last answer.
 --
 -- The parser for now is primitive and all the parsing occurs after processing
@@ -85,6 +100,75 @@ runLastMinizincJSON minizinc obj = do
     fullPath = mkTmpDataPath minizinc obj
     locateLastAnswer :: FromJSON answer => ByteString -> Maybe answer
     locateLastAnswer = locateLastOutput >=> decode . fromStrict
+    args :: [String]
+    args =
+      [ "--time-limit",
+        show (mkTimeLimit minizinc obj),
+        "--solver",
+        showSolver (mkSolver minizinc obj),
+        "--output-mode",
+        "json"
+      ]
+        ++ (mkExtraArgs minizinc obj)
+        ++ [ model minizinc,
+             fullPath
+           ]
+
+data SearchState
+  = Exhausted
+  | Incomplete
+  deriving (Show, Eq, Ord)
+
+data ResultHandler obj = ResultHandler { handleNext :: SearchState -> obj -> IO (Maybe (ResultHandler obj)) }
+
+runMinizincJSON ::
+  forall input answer.
+  (ToJSON input, FromJSON answer) =>
+  MiniZinc input answer ->
+  input ->
+  ResultHandler answer ->
+  IO ()
+runMinizincJSON minizinc obj resultHandler = do
+  LByteString.writeFile fullPath $ encode obj
+  (_, Just out, _, _) <- createProcess (proc "minizinc" args){ std_out = CreatePipe }
+  go out (parse oneResult) "" resultHandler
+  hClose out
+  where
+    go :: Handle
+       -> (ByteString -> IResult ByteString (Value,SearchState))
+       -> ByteString
+       -> ResultHandler answer
+       -> IO ()
+    go out parsebuf buf handler
+      | ByteString.null buf = do
+           eof <- hIsEOF out
+           if eof
+           then
+             inputFinished
+           else do
+             dat <- ByteString.hGetLine out
+             go out parsebuf dat handler
+      | otherwise = do
+           case parsebuf buf of
+             Done remainderBuf (val, state) -> do
+               case fromJSON val of
+                 Success obj -> do
+                   nextHandler <- (handleNext handler) state obj
+                   case nextHandler of 
+                     Nothing -> userFinished
+                     Just resultHandler -> go out (parse oneResult) remainderBuf resultHandler
+                 Error err -> do
+                   print err
+             Fail _ ctx err -> do
+               print ctx
+               print err
+             Partial f -> go out f "" handler
+
+    inputFinished = print "no more input"
+    userFinished = print "user requested to finish"
+
+    fullPath :: FilePath
+    fullPath = mkTmpDataPath minizinc obj
     args :: [String]
     args =
       [ "--time-limit",
@@ -121,3 +205,17 @@ locateLastOutput =
     safehead xs = Just $ head xs
     resultSeparator = "\n----------\n"
     openCurlybrace = "{"
+
+
+-- | NOTE: the parser is fed with hGetLine (stripping EOL markers)
+-- this assumption simplifies the grammar below
+oneResult :: Parser (Value, SearchState)
+oneResult =
+    (,) <$> json' <*> searchstate
+  where
+    searchstate =
+      try (resultMark *> exhaustiveMark *> pure Exhausted)
+      <|> (resultMark *> pure Incomplete)
+    resultMark = "----------"
+    exhaustiveMark = "=========="
+    unsatMark = "=====UNSATISFIABLE====="

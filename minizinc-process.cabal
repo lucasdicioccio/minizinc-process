@@ -32,10 +32,12 @@ library
     src
   build-depends:       base >=4.13 && <4.14
                      , aeson
+                     , attoparsec
                      , bytestring
                      , containers
                      , directory
                      , hashable
+                     , process
                      , process-extras
                      , stringsearch
                      , text
