@@ -126,12 +126,13 @@ example003bis = do
   let (input003,translateBack) = translate003 rooms users
   let mzn = simpleMiniZinc @Input003 @Output003 path 10000 Gecode
           & withArgs ["-a"]
-  runMinizincJSON mzn input003 handler
+  n <- runMinizincJSON mzn input003 (0 :: Int) handler
+  putStrLn $ "number of solutions: " <> show n
   where
     handler = ResultHandler handle
-    handle searchstate = do
+    handle n searchstate = do
       print searchstate
-      pure $ Just handler
+      pure $ (n+1, Just handler)
     users = [albert, paul, philip, sarah, sylvia, zoe]
     rooms = [large, medium, small]
 
@@ -156,9 +157,9 @@ example004 :: IO ()
 example004 = do
   path <- getDataFileName "models/example004.mzn"
   let mzn = simpleMiniZinc @Input004 @Output004 path 10000 Gecode
-  runMinizincJSON mzn (mkInput004 5) handler
+  runMinizincJSON mzn (mkInput004 5) () handler
   where
     handler = ResultHandler handle
-    handle searchstate = do
+    handle v0 searchstate = do
       print searchstate
-      pure $ Just handler
+      pure $ (v0, Just handler)

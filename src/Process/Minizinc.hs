@@ -132,50 +132,56 @@ reduce (Incomplete val) = case fromJSON val of
   Success obj -> Incomplete obj
   Error err -> InternalError err
 
-data ResultHandler obj = ResultHandler { handleNext :: SearchState Value -> IO (Maybe (ResultHandler obj)) }
+data ResultHandler obj b
+  = ResultHandler
+  { handleNext :: b -> SearchState Value -> IO (b, Maybe (ResultHandler obj b))
+  }
 
 runMinizincJSON ::
-  forall input answer.
+  forall input answer b.
   (ToJSON input, FromJSON answer) =>
   MiniZinc input answer ->
   input ->
-  ResultHandler answer ->
-  IO ()
-runMinizincJSON minizinc obj resultHandler = do
+  b ->
+  ResultHandler answer b ->
+  IO b
+runMinizincJSON minizinc obj v0 resultHandler = do
   LByteString.writeFile fullPath $ encode obj
   (_, Just out, _, _) <- createProcess (proc "minizinc" args){ std_out = CreatePipe }
-  go out (parse oneResult) "" resultHandler
+  vRet <- go out (parse oneResult) "" v0 resultHandler
   hClose out
+  pure vRet
   where
     go :: Handle
        -> (ByteString -> IResult ByteString (SearchState Value))
        -> ByteString
-       -> ResultHandler answer
-       -> IO ()
-    go out parsebuf buf handler
+       -> b
+       -> ResultHandler answer b
+       -> IO b
+    go out parsebuf buf v1 handler
       | ByteString.null buf = do
            eof <- hIsEOF out
            if eof
            then
-             inputFinished
+             inputFinished v1
            else do
              dat <- ByteString.hGetLine out
-             go out parsebuf dat handler
+             go out parsebuf dat v1 handler
       | otherwise = do
            case parsebuf buf of
              Done remainderBuf stateVal -> do
-               nextHandler <- (handleNext handler) (reduce stateVal)
+               (v2, nextHandler) <- (handleNext handler) v1 (reduce stateVal)
                case nextHandler of
-                 Nothing -> userFinished
-                 Just resultHandler -> go out (parse oneResult) remainderBuf resultHandler
+                 Nothing -> userFinished v2
+                 Just resultHandler -> go out (parse oneResult) remainderBuf v2 resultHandler
              Fail _ _ err -> do
-               void $ (handleNext handler) (InternalError err)
-               finalizeFailure
-             Partial f -> go out f "" handler
+               (v2,_) <- (handleNext handler) v1 (InternalError err)
+               finalizeFailure v2
+             Partial f -> go out f "" v1 handler
 
-    inputFinished = pure ()
-    userFinished = pure ()
-    finalizeFailure = pure ()
+    inputFinished = pure
+    userFinished = pure
+    finalizeFailure = pure
 
     fullPath :: FilePath
     fullPath = mkTmpDataPath minizinc obj
