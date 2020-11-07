@@ -25,6 +25,8 @@ main = do
   example003
   putStrLn "*>> example 3bis (streaming realistic)"
   example003bis
+  putStrLn "*>> example 4 (unsat)"
+  example004
 
 -- Example001: some trivial input/output.
 data Input001 = Input001 {x :: Int}
@@ -127,8 +129,8 @@ example003bis = do
   runMinizincJSON mzn input003 handler
   where
     handler = ResultHandler handle
-    handle searchstate out003 = do
-      print (searchstate, out003)
+    handle searchstate = do
+      print searchstate
       pure $ Just handler
     users = [albert, paul, philip, sarah, sylvia, zoe]
     rooms = [large, medium, small]
@@ -145,3 +147,18 @@ example003bis = do
     large  = Room "large"  4
     medium = Room "medium" 3
     small  = Room "small"  2
+
+type Input004 = Input001
+mkInput004 = Input001
+type Output004 = Output001
+
+example004 :: IO ()
+example004 = do
+  path <- getDataFileName "models/example004.mzn"
+  let mzn = simpleMiniZinc @Input004 @Output004 path 10000 Gecode
+  runMinizincJSON mzn (mkInput004 5) handler
+  where
+    handler = ResultHandler handle
+    handle searchstate = do
+      print searchstate
+      pure $ Just handler

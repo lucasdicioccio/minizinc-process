@@ -1,6 +1,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE DeriveFunctor #-}
 
 -- | A set of types and functions to help calling Minizinc as an external binary.
 --
@@ -21,7 +22,7 @@ module Process.Minizinc
   )
 where
 
-import Control.Monad ((>=>))
+import Control.Monad ((>=>), void)
 import Control.Applicative ((<|>))
 import Data.Attoparsec.ByteString (Parser, parse, IResult(..))
 import Data.Attoparsec.Combinator (try)
@@ -114,12 +115,24 @@ runLastMinizincJSON minizinc obj = do
              fullPath
            ]
 
-data SearchState
-  = Exhausted
-  | Incomplete
-  deriving (Show, Eq, Ord)
+data SearchState a
+  = Exhausted a
+  | Incomplete a
+  | Unsatisfiable
+  | InternalError String
+  deriving (Show, Eq, Ord, Functor)
 
-data ResultHandler obj = ResultHandler { handleNext :: SearchState -> obj -> IO (Maybe (ResultHandler obj)) }
+reduce :: FromJSON a => SearchState Value -> SearchState a
+reduce Unsatisfiable = Unsatisfiable
+reduce (InternalError s) = InternalError s
+reduce (Exhausted val) = case fromJSON val of
+  Success obj -> Exhausted obj
+  Error err -> InternalError err
+reduce (Incomplete val) = case fromJSON val of
+  Success obj -> Incomplete obj
+  Error err -> InternalError err
+
+data ResultHandler obj = ResultHandler { handleNext :: SearchState Value -> IO (Maybe (ResultHandler obj)) }
 
 runMinizincJSON ::
   forall input answer.
@@ -135,7 +148,7 @@ runMinizincJSON minizinc obj resultHandler = do
   hClose out
   where
     go :: Handle
-       -> (ByteString -> IResult ByteString (Value,SearchState))
+       -> (ByteString -> IResult ByteString (SearchState Value))
        -> ByteString
        -> ResultHandler answer
        -> IO ()
@@ -150,15 +163,11 @@ runMinizincJSON minizinc obj resultHandler = do
              go out parsebuf dat handler
       | otherwise = do
            case parsebuf buf of
-             Done remainderBuf (val, state) -> do
-               case fromJSON val of
-                 Success obj -> do
-                   nextHandler <- (handleNext handler) state obj
-                   case nextHandler of 
-                     Nothing -> userFinished
-                     Just resultHandler -> go out (parse oneResult) remainderBuf resultHandler
-                 Error err -> do
-                   print err
+             Done remainderBuf stateVal -> do
+               nextHandler <- (handleNext handler) (reduce stateVal)
+               case nextHandler of
+                 Nothing -> userFinished
+                 Just resultHandler -> go out (parse oneResult) remainderBuf resultHandler
              Fail _ ctx err -> do
                print ctx
                print err
@@ -209,13 +218,20 @@ locateLastOutput =
 
 -- | NOTE: the parser is fed with hGetLine (stripping EOL markers)
 -- this assumption simplifies the grammar below
-oneResult :: Parser (Value, SearchState)
+oneResult :: Parser (SearchState Value)
 oneResult =
-    (,) <$> json' <*> searchstate
+    try unsat
+    <|> sat
   where
+    unsat =  unsatMark *> pure Unsatisfiable
+
+    sat = reverseAp <$> json' <*> searchstate
+    reverseAp val constructor = constructor val
+
     searchstate =
       try (resultMark *> exhaustiveMark *> pure Exhausted)
-      <|> (resultMark *> pure Incomplete)
+      <|> try (resultMark *> pure Incomplete)
+
     resultMark = "----------"
     exhaustiveMark = "=========="
     unsatMark = "=====UNSATISFIABLE====="
