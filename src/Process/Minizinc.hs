@@ -168,13 +168,14 @@ runMinizincJSON minizinc obj resultHandler = do
                case nextHandler of
                  Nothing -> userFinished
                  Just resultHandler -> go out (parse oneResult) remainderBuf resultHandler
-             Fail _ ctx err -> do
-               print ctx
-               print err
+             Fail _ _ err -> do
+               void $ (handleNext handler) (InternalError err)
+               finalizeFailure
              Partial f -> go out f "" handler
 
-    inputFinished = print "no more input"
-    userFinished = print "user requested to finish"
+    inputFinished = pure ()
+    userFinished = pure ()
+    finalizeFailure = pure ()
 
     fullPath :: FilePath
     fullPath = mkTmpDataPath minizinc obj
