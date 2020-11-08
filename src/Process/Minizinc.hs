@@ -76,7 +76,7 @@ simpleMiniZinc ::
 simpleMiniZinc path timeout solver =
   MiniZinc
     path
-    (\obj -> show (hash obj) ++ ".json")
+    (\obj -> "minizinc-process-" ++ show (hash obj) ++ ".json")
     (const timeout)
     (const solver)
     (const [])
