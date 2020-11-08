@@ -158,16 +158,7 @@ runMinizincJSON minizinc obj v0 resultHandler = do
        -> b
        -> ResultHandler answer b
        -> IO b
-    go out parsebuf buf v1 handler
-      | ByteString.null buf = do
-           eof <- hIsEOF out
-           if eof
-           then
-             inputFinished v1
-           else do
-             dat <- ByteString.hGetLine out
-             go out parsebuf dat v1 handler
-      | otherwise = do
+    go out parsebuf buf v1 handler = do
            case parsebuf buf of
              Done remainderBuf stateVal -> do
                (v2, nextHandler) <- (handleNext handler) v1 (reduce stateVal)
@@ -177,7 +168,20 @@ runMinizincJSON minizinc obj v0 resultHandler = do
              Fail _ _ err -> do
                (v2,_) <- (handleNext handler) v1 (InternalError err)
                finalizeFailure v2
-             Partial f -> go out f "" v1 handler
+             Partial f -> do
+               -- NOTE: on End-Of-File we attempt to feed an empty byte to
+               -- conclude the parse.
+               -- Thus the real "final marked" is when the Handle is at EOF and
+               -- the input chunk is empty.
+               -- A more explicit final-result marker could benefit the
+               -- implementation of ResultHandler.
+               eof <- hIsEOF out
+               case (eof, ByteString.null buf) of
+                 (True, True) -> inputFinished v1
+                 (True, False) -> go out f "" v1 handler
+                 _             -> do
+                     dat <- ByteString.hGetLine out
+                     go out f dat v1 handler
 
     inputFinished = pure
     userFinished = pure

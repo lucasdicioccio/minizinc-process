@@ -19,6 +19,8 @@ main :: IO ()
 main = do
   putStrLn "*>> example 1 (trivial)"
   example001
+  putStrLn "*>> example 1 (trivial, streaming)"
+  example001Stream
   putStrLn "*>> example 2 (inspection)"
   example002
   putStrLn "*>> example 3 (realistic)"
@@ -47,6 +49,17 @@ example001 = do
   let mzn = simpleMiniZinc @Input001 @Output001 path 1000 Gecode
   let solve = runLastMinizincJSON mzn
   traverse_ (\i -> print i >> solve i >>= print) [Input001 x | x <- [0..4] ]
+
+example001Stream :: IO ()
+example001Stream = do
+  path <- getDataFileName "models/example001.mzn"
+  let mzn = simpleMiniZinc @Input001 @Output001 path 1000 Gecode
+  let solve input = runMinizincJSON mzn input () handler
+  traverse_ (\i -> print i >> solve i >>= print) [Input001 x | x <- [0..4] ]
+  where
+    handler :: ResultHandler Output001 ()
+    handler = ResultHandler handle
+    handle v o = print (v,o) >> pure ((), Just handler)
 
 -- Example002: shows model inspection result for a model with a bit of every
 -- MiniZinc types.

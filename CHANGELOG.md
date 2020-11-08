@@ -2,6 +2,10 @@
 
 ## Unreleased changes
 
+## 0.1.2.1 -- 2020-11-08
+
+* Handle case where final result is partial.
+
 ## 0.1.2.0 -- 2020-11-08
 
 * Pass a parsed JSON Value rather than the Value in ResultHandler.
