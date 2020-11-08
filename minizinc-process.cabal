@@ -4,7 +4,7 @@ cabal-version:       >=1.10
 -- http://haskell.org/cabal/users-guide/
 
 name:                minizinc-process
-version:             0.1.2.1
+version:             0.1.2.2
 synopsis:            A set of helpers to call minizinc models.
 description:         MiniZinc is a language and a toolchain to solve discrete optimization problems. This package provides simple wrappers around the MiniZinc executable to pass inputs and read outputs.
 homepage:       https://github.com/lucasdicioccio/minizinc-process#readme
