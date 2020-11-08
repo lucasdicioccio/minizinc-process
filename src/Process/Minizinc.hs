@@ -134,7 +134,7 @@ reduce (Incomplete val) = case fromJSON val of
 
 data ResultHandler obj b
   = ResultHandler
-  { handleNext :: b -> SearchState Value -> IO (b, Maybe (ResultHandler obj b))
+  { handleNext :: b -> SearchState obj -> IO (b, Maybe (ResultHandler obj b))
   }
 
 runMinizincJSON ::

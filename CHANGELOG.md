@@ -2,6 +2,10 @@
 
 ## Unreleased changes
 
+## 0.1.2.0 -- 2020-11-08
+
+* Pass a parsed JSON Value rather than the Value in ResultHandler.
+
 ## 0.1.1.0 -- 2020-11-07
 
 * Add streaming results API.
