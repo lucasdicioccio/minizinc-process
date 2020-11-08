@@ -21,6 +21,8 @@ main = do
   example001
   putStrLn "*>> example 1 (trivial, streaming)"
   example001Stream
+  putStrLn "*>> example 1 (trivial, collecting 100ms of results [truncated to 10])"
+  example001Collect
   putStrLn "*>> example 2 (inspection)"
   example002
   putStrLn "*>> example 3 (realistic)"
@@ -60,6 +62,13 @@ example001Stream = do
     handler :: ResultHandler Output001 ()
     handler = ResultHandler handle
     handle v o = print (v,o) >> pure ((), Just handler)
+
+example001Collect :: IO ()
+example001Collect = do
+  path <- getDataFileName "models/example001.mzn"
+  let mzn = simpleMiniZinc @Input001 @Output001 path 100 Gecode & withArgs [ "-a" ]
+  runMinizincJSON mzn (Input001 0) [] collectResults >>= print . take 10
+
 
 -- Example002: shows model inspection result for a model with a bit of every
 -- MiniZinc types.
@@ -108,11 +117,10 @@ translate003 rooms users =
 example003 :: IO ()
 example003 = do
   path <- getDataFileName "models/example003.mzn"
-  let solve = runLastMinizincJSON (simpleMiniZinc @Input003 @Output003 path 10000 Gecode)
-
   let (input003,translateBack) = translate003 rooms users
-  output <- solve input003
-  case output of
+  let mzn = simpleMiniZinc @Input003 @Output003 path 10000 Gecode
+  output <- runMinizincJSON mzn input003 Nothing keepLast
+  case output >>= result of
     Nothing -> print "no solutions"
     Just pairs -> print [ (name u, label r) | (u,r) <- translateBack pairs ]
   where

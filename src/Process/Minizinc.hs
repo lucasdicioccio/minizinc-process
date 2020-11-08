@@ -17,8 +17,11 @@ module Process.Minizinc
     MilliSeconds,
     runLastMinizincJSON,
     SearchState(..),
+    result,
     ResultHandler(..),
     runMinizincJSON,
+    collectResults,
+    keepLast,
   )
 where
 
@@ -122,6 +125,11 @@ data SearchState a
   | InternalError String
   deriving (Show, Eq, Ord, Functor)
 
+result :: SearchState a -> Maybe a
+result (Incomplete a) = Just a
+result (Exhausted a) = Just a
+result _ = Nothing
+
 reduce :: FromJSON a => SearchState Value -> SearchState a
 reduce Unsatisfiable = Unsatisfiable
 reduce (InternalError s) = InternalError s
@@ -136,6 +144,20 @@ data ResultHandler obj b
   = ResultHandler
   { handleNext :: b -> SearchState obj -> IO (b, Maybe (ResultHandler obj b))
   }
+
+-- | Collect all results in memory.
+-- The resulting list is in reverse order (best are first elements in case of optimizations).
+collectResults :: ResultHandler obj [SearchState obj]
+collectResults = ResultHandler go
+  where
+    go xs x = seq x $ pure (x:xs, Just $ collectResults)
+
+-- | Keep only the latest result in memory.
+keepLast :: ResultHandler obj (Maybe (SearchState obj))
+keepLast = ResultHandler go
+  where
+    go _ x = seq x $ pure (Just x, Just $ keepLast)
+
 
 runMinizincJSON ::
   forall input answer b.
