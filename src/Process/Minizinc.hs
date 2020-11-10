@@ -50,6 +50,7 @@ type SolverName = String
 
 -- | Supported solvers or 'Other'.
 data Solver = Chuffed | COIN_BC | CPLEX | Gecode | Gurobi | SCIP | Xpress | Other SolverName
+  deriving (Show)
 
 -- | An object helping to run MiniZinc.
 data MiniZinc input answer

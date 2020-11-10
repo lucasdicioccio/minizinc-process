@@ -51,6 +51,8 @@ test-suite minizinc-process-tests-hedghehog
                      , minizinc-process
                      , hashable
                      , hedgehog
+                     , hspec
+                     , hspec-hedgehog
   hs-source-dirs:
      test
 
