@@ -43,6 +43,17 @@ library
                      , text
   default-language:    Haskell2010
 
+test-suite minizinc-process-tests-hedghehog
+  main-is:             Test.hs
+  type: exitcode-stdio-1.0
+  build-depends:       base >=4.13 && <4.14
+                     , aeson
+                     , minizinc-process
+                     , hashable
+                     , hedgehog
+  hs-source-dirs:
+     test
+
 executable minizinc-process-examples
   main-is:             Main.hs
   other-modules:
