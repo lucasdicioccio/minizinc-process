@@ -27,6 +27,7 @@ module Process.Minizinc
 where
 
 import Control.Applicative ((<|>))
+import Control.Exception (bracket)
 import Data.Attoparsec.ByteString (Parser, parse, IResult(..))
 import Data.Attoparsec.Combinator (try)
 import Data.Aeson (FromJSON, fromJSON, ToJSON, encode, Value, Result(..))
@@ -36,8 +37,8 @@ import qualified Data.ByteString as ByteString
 import qualified Data.ByteString.Lazy as LByteString
 import Data.Hashable (Hashable, hash)
 import System.Directory (removeFile)
-import System.Process (createProcess, proc, StdStream(CreatePipe), std_out)
-import GHC.IO.Handle (Handle, hClose, hIsEOF)
+import System.Process (createProcess, proc, StdStream(CreatePipe), std_out, cleanupProcess)
+import GHC.IO.Handle (Handle, hIsEOF)
 
 -- | Type alias asking for milliseconds.
 type MilliSeconds a = Int
@@ -150,10 +151,11 @@ runMinizincJSON ::
   IO b
 runMinizincJSON minizinc obj v0 resultHandler = do
   LByteString.writeFile fullPath $ encode obj
-  (_, Just out, _, _) <- createProcess (proc "minizinc" args){ std_out = CreatePipe }
-  vRet <- go out (parse oneResult) "" v0 resultHandler
-  hClose out
-  pure vRet
+  let start = createProcess (proc "minizinc" args){ std_out = CreatePipe }
+  bracket
+    start
+    cleanupProcess
+    (\(_, Just out, _, _) -> go out (parse oneResult) "" v0 resultHandler)
   where
     go :: Handle
        -> (ByteString -> IResult ByteString (SearchState Value))
