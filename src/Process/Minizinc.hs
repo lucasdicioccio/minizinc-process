@@ -15,30 +15,27 @@ module Process.Minizinc
     Solver (..),
     SolverName,
     MilliSeconds,
-    runLastMinizincJSON,
     SearchState(..),
     result,
     ResultHandler(..),
     runMinizincJSON,
     collectResults,
     keepLast,
+    runLastMinizincJSON,
+    cleanTmpFile,
   )
 where
 
-import Control.Monad ((>=>), void)
 import Control.Applicative ((<|>))
 import Data.Attoparsec.ByteString (Parser, parse, IResult(..))
 import Data.Attoparsec.Combinator (try)
-import Data.Aeson (FromJSON, fromJSON, ToJSON, decode, encode, Value, Result(..))
+import Data.Aeson (FromJSON, fromJSON, ToJSON, encode, Value, Result(..))
 import Data.Aeson.Parser.Internal (json')
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as ByteString
 import qualified Data.ByteString.Lazy as LByteString
-import Data.ByteString.Lazy (fromStrict)
-import Data.ByteString.Search.DFA (split)
 import Data.Hashable (Hashable, hash)
-import qualified Data.List as List
-import System.Process.ByteString (readProcessWithExitCode)
+import System.Directory (removeFile)
 import System.Process (createProcess, proc, StdStream(CreatePipe), std_out)
 import GHC.IO.Handle (Handle, hClose, hIsEOF)
 
@@ -67,6 +64,10 @@ data MiniZinc input answer
         mkExtraArgs :: input -> [String]
       }
 
+-- | Removes the temporary data file created as input before running minizinc.
+cleanTmpFile :: MiniZinc input a -> input -> IO ()
+cleanTmpFile mzn = removeFile . mkTmpDataPath mzn
+
 -- | A constructor for MiniZinc object for simple situations.
 simpleMiniZinc ::
   Hashable input =>
@@ -87,37 +88,16 @@ withArgs :: [String] -> MiniZinc input answer -> MiniZinc input answer
 withArgs args mzn = mzn { mkExtraArgs = const args }
 
 -- | Runs MiniZinc on the input and parses output for the last answer.
---
--- The parser for now is primitive and all the parsing occurs after processing
--- with no guarantee to run on bounded-memory. This matters if your MiniZinc
--- model returns so many solutions that the output is large.
 runLastMinizincJSON ::
   (ToJSON input, FromJSON answer) =>
   MiniZinc input answer ->
   input ->
   IO (Maybe answer)
 runLastMinizincJSON minizinc obj = do
-  LByteString.writeFile fullPath $ encode obj
-  (_, out, err) <- readProcessWithExitCode "minizinc" args ""
-  seq (ByteString.length err) $ pure $ locateLastAnswer out
+  fmap adapt $ runMinizincJSON minizinc obj Nothing keepLast
   where
-    fullPath :: FilePath
-    fullPath = mkTmpDataPath minizinc obj
-    locateLastAnswer :: FromJSON answer => ByteString -> Maybe answer
-    locateLastAnswer = locateLastOutput >=> decode . fromStrict
-    args :: [String]
-    args =
-      [ "--time-limit",
-        show (mkTimeLimit minizinc obj),
-        "--solver",
-        showSolver (mkSolver minizinc obj),
-        "--output-mode",
-        "json"
-      ]
-        ++ (mkExtraArgs minizinc obj)
-        ++ [ model minizinc,
-             fullPath
-           ]
+    adapt :: Maybe (SearchState a) -> Maybe a
+    adapt x = x >>= result
 
 data SearchState a
   = Exhausted a
@@ -236,18 +216,6 @@ showSolver = \case
   SCIP -> "SCIP"
   Xpress -> "Xpress"
   Other n -> n
-
-locateLastOutput :: ByteString -> Maybe ByteString
-locateLastOutput =
-  safehead
-    . reverse
-    . List.filter (ByteString.isPrefixOf openCurlybrace)
-    . split resultSeparator
-  where
-    safehead [] = Nothing
-    safehead xs = Just $ head xs
-    resultSeparator = "\n----------\n"
-    openCurlybrace = "{"
 
 
 -- | NOTE: the parser is fed with hGetLine (stripping EOL markers)

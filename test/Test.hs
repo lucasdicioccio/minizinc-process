@@ -34,14 +34,18 @@ mzncall_t001_01 = do
     x <- forAll $ Gen.integral (Range.linear (-100) 100)
     s <- forAll solver
     let mzn = simpleMiniZinc @Input001 @Output001 "models/test001_01.mzn" 1000 s
-    outy <- liftIO $ runLastMinizincJSON mzn (Input001 x)
+    let input = Input001 x
+    outy <- liftIO $ runLastMinizincJSON mzn input
+    liftIO $ cleanTmpFile mzn input
     Just x === fmap output001Y outy
 
 mzncall_t001_02 = do
     x <- forAll $ Gen.integral (Range.linear (-100) 100)
     s <- forAll solver
     let mzn = simpleMiniZinc @Input001 @Output001 "models/test001_02.mzn" 1000 s
-    outy <- liftIO $ runLastMinizincJSON mzn (Input001 x)
+    let input = Input001 x
+    outy <- liftIO $ runLastMinizincJSON mzn input
+    liftIO $ cleanTmpFile mzn input
     Nothing === outy
 
 prop_mzncall_t001_01 :: Property

@@ -2,6 +2,10 @@
 
 ## Unreleased changes
 
+* Unify backing code when getting last result and streaming results (better RAM usage for long sequences).
+* Add function to clean temporary files.
+* Initial set of unit tests.
+
 ## 0.1.2.1 -- 2020-11-08
 
 * Handle case where final result is partial.
