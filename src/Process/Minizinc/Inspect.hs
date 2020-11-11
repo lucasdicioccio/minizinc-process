@@ -10,6 +10,7 @@ module Process.Minizinc.Inspect
   )
 where
 
+import Control.Applicative ((<|>))
 import Data.Aeson
 import qualified Data.ByteString as ByteString
 import qualified Data.ByteString.Lazy as LByteString
@@ -65,7 +66,7 @@ instance FromJSON Interface where
   parseJSON = withObject "Interface" $ \v ->
     Interface
       <$> v .: "method"
-      <*> v .: "has_output_item"
+      <*> (v .: "has_output_item" <|> v.: "has_outputItem")
       <*> v .: "input"
       <*> v .: "output"
 
