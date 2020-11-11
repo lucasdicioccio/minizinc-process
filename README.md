@@ -88,6 +88,20 @@ For now, the implementation leverages file-system to pass the JSON object to
 MiniZinc, this design means you should pay attention to disk usage and maybe
 clean the clutter.
 
+# Development
+
+## Testing
+
+We use [Hedgehog](hedgehog.qa) to test the overall system at once rather than having
+individual tests for the internal parser and other files.
+
+Test cases are in `.hs` files under the `test` directory whereas the `.mzn`
+models are in the `models` directory.
+We use a naming nomenclature to help organize what files require what
+input/output types: `test{inputtype}_{testnum}.mzn` where `inputtype` pertains
+to the haskell Input/Output types and testnum pertains to the test number.
+Thus: all `testnum` are unique and are groupable by `inputtype`.
+
 # Misc.
 
 The author of this package is not affiliated with MiniZinc.
