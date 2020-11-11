@@ -30,17 +30,16 @@ library
     Process.Minizinc.Inspect
   hs-source-dirs:
     src
-  build-depends:       base >=4.13 && <4.14
-                     , aeson
-                     , attoparsec
-                     , bytestring
-                     , containers
-                     , directory
-                     , hashable
-                     , process
-                     , process-extras
-                     , stringsearch
-                     , text
+  build-depends:       base >=4.8.2 && <4.14
+                     , aeson >= 1.4
+                     , attoparsec >= 0.13.2.2
+                     , bytestring >= 0.10.4.0
+                     , containers >= 0.5.5.1
+                     , directory >= 1.3.1.0
+                     , hashable >= 1.2.7.0
+                     , process >= 1.6.4.0
+                     , process-extras >= 0.7.4
+                     , text >= 1.2.3.0
   default-language:    Haskell2010
 
 test-suite minizinc-process-tests-hedghehog
