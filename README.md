@@ -49,14 +49,14 @@ import Process.Minizinc.Inspect
 data Input = Input {x :: Int}
   deriving (Generic)
 
-instance ToJSON Input -- required for `runLastMinizincJSON`
+instance ToJSON Input -- required by `runLastMinizincJSON` for serialization of input
 
-instance Hashable Input -- required for `runLastMinizincJSON`
+instance Hashable Input -- required by `simpleMiniZinc` to create a somewhat unique filepath
 
 data Output = Output {y :: Int}
   deriving (Show, Generic)
 
-instance FromJSON Output -- required for `runLastMinizincJSON`
+instance FromJSON Output -- required by `runLastMinizincJSON` for deserialization of output
 
 main :: IO ()
 main = do
@@ -70,6 +70,13 @@ The `@Input` and `@Output` syntax allow to pass type parameters to
 `simpleMiniZinc`, this style is optional but helps the GHC compiler inference
 (in our example, this type application is the only indication needed to tell
 the compiler to deserialize `Output` objects).
+
+A more-general function named `runMinizincJSON` allows to stream results
+iteratively has the solver progresses. This function is more complicated than
+`runLastMinizincJSON` has it takes a callback to consume an output and control
+whether to continue reading inputs or not (i.e., a coroutine) plus some initial
+state that is carried over (a bit like a fold). Luckily, we provide two
+coroutines `keepLast` and `collectResults` for some typical use cases.
 
 # Usage in a project
 
@@ -86,20 +93,21 @@ but at this time it would not be immediately feasible. Be at peace with this.
 
 For now, the implementation leverages file-system to pass the JSON object to
 MiniZinc, this design means you should pay attention to disk usage and maybe
-clean the clutter.
+clean the clutter. A function named `cleanTmpFile` will remove the `.json` disk
+file for a given pair of MiniZinc and input objects.
 
 # Development
 
 ## Testing
 
-We use [Hedgehog](hedgehog.qa) to test the overall system at once rather than having
+We use [Hedgehog](https://hedgehog.qa/) to test the overall system at once rather than having
 individual tests for the internal parser and other files.
 
 Test cases are in `.hs` files under the `test` directory whereas the `.mzn`
 models are in the `models` directory.
 We use a naming nomenclature to help organize what files require what
 input/output types: `test{inputtype}_{testnum}.mzn` where `inputtype` pertains
-to the haskell Input/Output types and testnum pertains to the test number.
+to the haskell Input/Output types and `testnum` pertains to the test number.
 Thus: all `testnum` are unique and are groupable by `inputtype`.
 
 # Misc.
