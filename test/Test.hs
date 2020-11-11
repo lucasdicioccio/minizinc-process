@@ -4,6 +4,7 @@
 module Main where
 
 import Data.Function ((&))
+import qualified Data.List as List
 import Data.Aeson (FromJSON(..), ToJSON(..), (.=), (.:))
 import qualified Data.Aeson as Aeson
 import Data.Hashable (Hashable(..))
@@ -63,11 +64,18 @@ mzncall_t001_03 = do
                 & withArgs ["-a"]
     let input = Input001 x
     outputs <- liftIO $ runMinizincJSON mzn input [] collectResults
-    when (length outputs == 7) $ do
-      liftIO $ print outputs
-      liftIO $ cleanTmpFile mzn input
-    length outputs === 7
 
+    let (exhaustives,nonExhaustives) = List.partition isExhaustive outputs
+
+    when (length outputs == 7) $ do
+      liftIO $ cleanTmpFile mzn input
+
+    length outputs === 7
+    length nonExhaustives === 6
+    length exhaustives === 1
+  where
+    isExhaustive (Exhausted a) = True
+    isExhaustive _             = False
 
 prop_mzncall_t001_01 :: Property
 prop_mzncall_t001_01 =
