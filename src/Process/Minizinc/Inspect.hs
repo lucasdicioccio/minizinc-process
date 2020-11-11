@@ -14,9 +14,11 @@ import Control.Applicative ((<|>))
 import Data.Aeson
 import qualified Data.ByteString as ByteString
 import qualified Data.ByteString.Lazy as LByteString
-import Data.Map (Map)
+import Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
 import Data.Text (Text)
 import qualified Data.Text as Text
+import qualified Data.List as List
 import System.Process.ByteString (readProcessWithExitCode)
 
 -- | Name of variables.
@@ -29,7 +31,7 @@ data TypeInfo
         _set :: Bool,
         _dim :: Maybe Int
       }
-  deriving (Show)
+  deriving (Eq, Ord, Show)
 
 instance FromJSON TypeInfo where
   parseJSON = withObject "TypeInfo" $ \v ->
@@ -40,6 +42,26 @@ instance FromJSON TypeInfo where
 
 -- | Type declarations of the minizinc model.
 type TypeDeclarations = Map Name TypeInfo
+
+haskellify :: TypeDeclarations -> Maybe Text
+haskellify typedecls =
+    fmap Text.unlines $ sequence $ fmap property $ pairs
+  where
+    pairs :: [(Name, TypeInfo)]
+    pairs = List.sort $ Map.assocs typedecls
+
+    property :: (Name, TypeInfo) -> Maybe Text
+    property (name, TypeInfo "int" False Nothing)    = Just $ mconcat [ name, "::", "Int" ]
+    property (name, TypeInfo "float" False Nothing)  = Just $ mconcat [ name, "::", "Float" ]
+    property (name, TypeInfo "int" False (Just n))   = Just $ mconcat [ name, "::", wrapAry n "Int" ]
+    property (name, TypeInfo "float" False (Just n)) = Just $ mconcat [ name, "::", wrapAry n "Float" ]
+    property _                                       = Nothing
+
+    wrapAry :: Int -> Text -> Text
+    wrapAry n str =
+        let lparens = Text.replicate n "["
+            rparens = Text.replicate n "]"
+        in lparens <> str <> rparens
 
 -- | Optimization method.
 data Method = Minimize | Maximize | Satisfy
