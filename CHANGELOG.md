@@ -2,6 +2,8 @@
 
 ## Unreleased changes
 
+* Improve TemplateHaskell to arrays of floats and arrays of bools.
+
 ## 0.1.4.0 -- 2020-11-12
 
 * Add primitive TemplateHaskell generation of interface types.
