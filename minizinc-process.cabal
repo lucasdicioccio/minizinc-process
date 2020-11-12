@@ -4,7 +4,7 @@ cabal-version:       >=1.10
 -- http://haskell.org/cabal/users-guide/
 
 name:                minizinc-process
-version:             0.1.4.0
+version:             0.1.4.1
 synopsis:            A set of helpers to call minizinc models.
 description:         MiniZinc is a language and a toolchain to solve discrete optimization problems. This package provides simple wrappers around the MiniZinc executable to pass inputs and read outputs.
 homepage:       https://github.com/lucasdicioccio/minizinc-process#readme
@@ -58,22 +58,22 @@ test-suite minizinc-process-tests-hedghehog
      test
   default-language:    Haskell2010
 
-executable minizinc-process-examples
-  main-is:             Main.hs
-  other-modules:
-                       Paths_minizinc_process
-  -- other-extensions:
-  build-depends:       base >=4.13 && <4.14
-                     , aeson
-                     , minizinc-process
-                     , hashable
-                     , text
-  hs-source-dirs:
-     examples
-  data-files:
-     models/example001.mzn
-     models/example002.mzn
-     models/example003.mzn
-     models/example003bis.mzn
-     models/example004.mzn
-  default-language:    Haskell2010
+--executable minizinc-process-examples
+--  main-is:             Main.hs
+--  other-modules:
+--                       Paths_minizinc_process
+--  -- other-extensions:
+--  build-depends:       base >=4.13 && <4.14
+--                     , aeson
+--                     , minizinc-process
+--                     , hashable
+--                     , text
+--  hs-source-dirs:
+--     examples
+--  data-files:
+--     models/example001.mzn
+--     models/example002.mzn
+--     models/example003.mzn
+--     models/example003bis.mzn
+--     models/example004.mzn
+--  default-language:    Haskell2010
