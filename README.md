@@ -80,16 +80,63 @@ coroutines `keepLast` and `collectResults` for some typical use cases.
 
 # Usage in a project
 
+## MiniZinc model files
+
 In a typical project, you will have fixed models and varying inputs.
 That is, you would like to carry the models along with the code (e.g., a web
 application or gRPC server using minizinc in the background) in a same
 repository as your Haskell code. One option is to leverage the support of cabal
 [data-files](https://www.haskell.org/cabal/users-guide/developing-packages.html#accessing-data-files-from-package-code).
 
+## Serialization and DeSerialization
+
 You will still need some mapping functions to translate between domain objects
 like `User` into the JSON values that MiniZinc requires: objects do not map
 well with relations. We may consider compile-time helpers like TemplateHaskell,
 but at this time it would not be immediately feasible. Be at peace with this.
+
+A module named `Process.Minizinc.TH` has TemplateHaskell functions to
+generate. As of today, you'll still need to activate some extensions and
+import some libraries so that the TemplateHaskell-generated code compiles: as in the following example.
+
+```haskell
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE TemplateHaskell #-}
+
+import Data.Aeson
+import Data.Hashable
+import Process.Minizinc.TH
+import GHC.Generics
+
+genModelData "MyModel" "models/mymodel.mzn"
+```
+
+```minizinc
+int: x;
+array[1..2] of int: y;
+var int: z;
+
+...
+```
+
+Will generate the following haskell codes
+
+```haskell
+data MyModelOutput = MyModelOutput {
+  z :: Int
+} deriving (Show, Eq, Ord, Generic, Hashable, ToJSON, FromJSON)
+
+data MyModelInput = MyModelInput {
+  x :: Int,
+  y :: [[Int]]
+} deriving (Show, Eq, Ord, Generic, Hashable, ToJSON, FromJSON)
+```
+
+See `examples/Main.hs` for an example usage of TemplateHaskell.
+
+
+## Temporary data files
 
 For now, the implementation leverages file-system to pass the JSON object to
 MiniZinc, this design means you should pay attention to disk usage and maybe
