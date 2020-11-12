@@ -2,6 +2,10 @@
 
 ## Unreleased changes
 
+## 0.1.4.0 -- 2020-11-12
+
+* Add primitive TemplateHaskell generation of interface types.
+
 ## 0.1.3.0 -- 2020-11-11
 
 * Unify backing code when getting last result and streaming results (better RAM usage for long sequences).
