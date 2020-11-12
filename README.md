@@ -114,7 +114,7 @@ genModelData "MyModel" "models/mymodel.mzn"
 
 ```minizinc
 int: x;
-array[1..2] of int: y;
+array[1..2,1..2] of int: y;
 var int: z;
 
 ...
