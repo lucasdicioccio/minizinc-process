@@ -53,8 +53,10 @@ haskellify typedecls =
     property :: (Name, TypeInfo) -> Maybe Text
     property (name, TypeInfo "int" False Nothing)    = Just $ mconcat [ name, "::", "Int" ]
     property (name, TypeInfo "float" False Nothing)  = Just $ mconcat [ name, "::", "Float" ]
+    property (name, TypeInfo "bool" False Nothing)  = Just $ mconcat [ name, "::", "Bool" ]
     property (name, TypeInfo "int" False (Just n))   = Just $ mconcat [ name, "::", wrapAry n "Int" ]
     property (name, TypeInfo "float" False (Just n)) = Just $ mconcat [ name, "::", wrapAry n "Float" ]
+    property (name, TypeInfo "bool" False (Just n)) = Just $ mconcat [ name, "::", wrapAry n "Bool" ]
     property _                                       = Nothing
 
     wrapAry :: Int -> Text -> Text

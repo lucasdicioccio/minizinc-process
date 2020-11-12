@@ -1,6 +1,9 @@
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE DuplicateRecordFields #-}
 
 module Main where
 
@@ -12,8 +15,11 @@ import Data.Text (Text)
 import GHC.Generics
 import Process.Minizinc
 import Process.Minizinc.Inspect
+import Process.Minizinc.TH
 
 import Paths_minizinc_process
+
+genModelData "Model004" "models/example004.mzn"
 
 main :: IO ()
 main = do
@@ -104,6 +110,7 @@ data Output003 = Output003 { room :: [Int] }
 
 instance FromJSON Output003
 
+
 translate003 :: [Room] -> [User] -> (Input003, Output003 -> [(User, Room)])
 translate003 rooms users =
     let input003 = Input003 (length users) (length rooms) prefs sizes
@@ -170,15 +177,12 @@ example003bis = do
     medium = Room "medium" 3
     small  = Room "small"  2
 
-type Input004 = Input001
-mkInput004 = Input001
-type Output004 = Output001
 
 example004 :: IO ()
 example004 = do
   path <- getDataFileName "models/example004.mzn"
-  let mzn = simpleMiniZinc @Input004 @Output004 path 10000 Gecode
-  runMinizincJSON mzn (mkInput004 5) () handler
+  let mzn = simpleMiniZinc @Model004Input @Model004Output path 10000 Gecode
+  runMinizincJSON mzn (Model004Input 5) () handler
   where
     handler = ResultHandler handle
     handle v0 searchstate = do
