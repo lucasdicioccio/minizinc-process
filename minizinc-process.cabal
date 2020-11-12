@@ -47,7 +47,7 @@ library
 test-suite minizinc-process-tests-hedghehog
   main-is:             Test.hs
   type: exitcode-stdio-1.0
-  build-depends:       base >=4.13 && <4.14
+  build-depends:       base >=4.10 && <4.14
                      , aeson
                      , minizinc-process
                      , hashable
