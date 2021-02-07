@@ -24,6 +24,7 @@ import Data.Aeson (FromJSON, ToJSON)
 
 import Process.Minizinc
 import Process.Minizinc.TH
+import Process.Minizinc.Extra
 
 genModelData "Test002" "models/test002_04.mzn"
 
@@ -87,10 +88,10 @@ mzncall_t001_03 = do
 
 mzncall_t002_04 = do
     let mzn = simpleMiniZinc @Test002Input @Test002Output "models/test002_04.mzn" 1000 Gecode
-    let input = Test002Input 10 True 1.2 [1,2] [True,True] [0.2,0.3] [[1,2], [3,4]]
+    let input = Test002Input 10 True 1.2 [1,2] [True,True] [0.2,0.3] [[1,2], [3,4]] (MznSet [1,2,3,5,7]) (MznSet [True, False]) (MznSet [42.42])
     outy <- liftIO $ runLastMinizincJSON mzn input
-    liftIO $ cleanTmpFile mzn input
     assert $ isJust outy
+    liftIO $ cleanTmpFile mzn input
 
 prop_mzncall_t001_01 :: Property
 prop_mzncall_t001_01 =

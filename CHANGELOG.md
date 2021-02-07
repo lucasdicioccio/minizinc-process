@@ -2,6 +2,10 @@
 
 ## Unreleased changes
 
+* Add some MznSet wrapper to support sets.
+
+## 0.1.4.1 -- 2020-11-12
+
 * Improve TemplateHaskell to arrays of floats and arrays of bools.
 
 ## 0.1.4.0 -- 2020-11-12

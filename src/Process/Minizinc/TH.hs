@@ -51,7 +51,11 @@ genFromTypeDecls prefix base typedecls = do
      typeFor (TypeInfo "int" False (Just n))  = nestedlist n $ ConT (mkName "Int")
      typeFor (TypeInfo "bool" False (Just n))  = nestedlist n $ ConT (mkName "Bool")
      typeFor (TypeInfo "float" False (Just n))  = nestedlist n $ ConT (mkName "Float")
+     typeFor (TypeInfo "int" True Nothing)   = mznSet $ ConT (mkName "Int")
+     typeFor (TypeInfo "bool" True Nothing)  = mznSet $ ConT (mkName "Bool")
+     typeFor (TypeInfo "float" True Nothing) = mznSet $ ConT (mkName "Float")
      typeFor typedecl = error $ "unsupported type info when generating Haskell code from MiniZinc files: " <> show typedecl
 
+     mznSet ty = AppT (ConT (mkName "MznSet")) ty
      nestedlist 0 ty = ty
      nestedlist n ty = AppT ListT (nestedlist (n-1) ty)
