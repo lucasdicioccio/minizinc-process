@@ -4,6 +4,10 @@
 
 * Improve TemplateHaskell to arrays of floats and arrays of bools.
 
+## 0.1.5.0 -- 2024-04-02
+
+* Upgrade to aeson-2.x.
+
 ## 0.1.4.0 -- 2020-11-12
 
 * Add primitive TemplateHaskell generation of interface types.
