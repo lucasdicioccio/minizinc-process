@@ -33,7 +33,7 @@ library
     src
   build-depends:       base >=4.8.2 && <5,
     aeson >= 2.2.1 && < 2.3,
-    template-haskell >= 2.19.0 && < 2.20,
+    template-haskell >= 2.19.0 && < 2.40,
     containers >= 0.6.6 && < 0.7,
     bytestring >= 0.12.1 && < 0.13,
     hashable >= 1.4.3 && < 1.5,
